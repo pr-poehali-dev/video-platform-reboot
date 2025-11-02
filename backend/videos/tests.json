@@ -1,0 +1,36 @@
+{
+  "tests": [
+    {
+      "name": "Get all videos",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "videos": "array"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Upload new video",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "channel_id": 1,
+        "title": "Test Video",
+        "description": "Test description",
+        "video_url": "https://example.com/video.mp4",
+        "thumbnail_url": "https://example.com/thumb.jpg",
+        "duration": 120,
+        "video_type": "regular"
+      },
+      "expectedStatus": 201,
+      "expectedBody": {
+        "video": {
+          "title": "string",
+          "video_url": "string"
+        }
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

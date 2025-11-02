@@ -4,12 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+
+const API_URLS = {
+  auth: 'https://functions.poehali.dev/3477a78a-977d-4cda-90bc-5519dceaf38c',
+  videos: 'https://functions.poehali.dev/66bc61b3-8db7-4807-9d85-faed71a55c6b'
+};
 
 interface Video {
   id: number;
@@ -30,65 +39,103 @@ const Index = () => {
   const [videos, setVideos] = useState<Video[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isAdmin] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const { toast } = useToast();
+
+  const [authForm, setAuthForm] = useState({ username: '', email: '', password: '' });
+  const [uploadForm, setUploadForm] = useState({
+    title: '',
+    description: '',
+    video_url: '',
+    thumbnail_url: '',
+    duration: 0,
+    video_type: 'regular'
+  });
 
   useEffect(() => {
-    const mockVideos: Video[] = [
-      {
-        id: 1,
-        title: 'Добро пожаловать на платформу',
-        description: 'Первое видео на нашей платформе! Киберпанк стиль и современные технологии.',
-        thumbnail_url: 'https://images.unsplash.com/photo-1618609378039-b572f64c5b42?w=800',
-        video_url: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4',
-        duration: 60,
-        views_count: 12500,
-        likes_count: 890,
-        video_type: 'regular',
-        channel_name: 'Канал Администратора',
-        is_verified: true,
-      },
-      {
-        id: 2,
-        title: 'Гайд по функциям платформы',
-        description: 'Полное руководство по использованию всех возможностей видеохостинга.',
-        thumbnail_url: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800',
-        video_url: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4',
-        duration: 180,
-        views_count: 8900,
-        likes_count: 654,
-        video_type: 'regular',
-        channel_name: 'Канал Администратора',
-        is_verified: true,
-      },
-      {
-        id: 3,
-        title: 'Киберпанк 2077: Полное прохождение',
-        description: 'Начинаем серию прохождения самой ожидаемой игры!',
-        thumbnail_url: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800',
-        video_url: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4',
-        duration: 240,
-        views_count: 25400,
-        likes_count: 1520,
-        video_type: 'series',
-        channel_name: 'Канал Администратора',
-        is_verified: true,
-      },
-      {
-        id: 4,
-        title: 'Неоновый город: Документальный фильм',
-        description: 'Погружение в эстетику киберпанка через призму современных мегаполисов.',
-        thumbnail_url: 'https://images.unsplash.com/photo-1514539079130-25950c84af65?w=800',
-        video_url: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4',
-        duration: 3600,
-        views_count: 45600,
-        likes_count: 3200,
-        video_type: 'movie',
-        channel_name: 'Канал Администратора',
-        is_verified: true,
-      },
-    ];
-    setVideos(mockVideos);
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+    loadVideos();
   }, []);
+
+  const loadVideos = async () => {
+    try {
+      const response = await fetch(API_URLS.videos);
+      const data = await response.json();
+      setVideos(data.videos || []);
+    } catch (error) {
+      console.error('Failed to load videos:', error);
+    }
+  };
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(API_URLS.auth, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: authMode,
+          ...authForm
+        })
+      });
+      const data = await response.json();
+      
+      if (response.ok) {
+        const userData = { ...data.user, channel_id: data.channel_id, auth_token: data.auth_token };
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        setShowAuthDialog(false);
+        toast({ title: authMode === 'login' ? 'Вход выполнен!' : 'Регистрация завершена!' });
+      } else {
+        toast({ title: 'Ошибка', description: data.error, variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Ошибка сети', variant: 'destructive' });
+    }
+  };
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      toast({ title: 'Войдите в аккаунт', variant: 'destructive' });
+      return;
+    }
+    
+    try {
+      const response = await fetch(API_URLS.videos, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...uploadForm,
+          channel_id: user.channel_id
+        })
+      });
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast({ title: 'Видео загружено!' });
+        setShowUploadDialog(false);
+        loadVideos();
+        setUploadForm({ title: '', description: '', video_url: '', thumbnail_url: '', duration: 0, video_type: 'regular' });
+      } else {
+        toast({ title: 'Ошибка', description: data.error, variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Ошибка загрузки', variant: 'destructive' });
+    }
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('user');
+    toast({ title: 'Вы вышли из аккаунта' });
+  };
 
   const formatViews = (views: number) => {
     if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
@@ -110,7 +157,7 @@ const Index = () => {
     { id: 'library', label: 'Библиотека', icon: 'Library' },
     { id: 'channels', label: 'Каналы', icon: 'Tv' },
     { id: 'trending', label: 'Тренды', icon: 'TrendingUp' },
-    ...(isAdmin ? [{ id: 'admin', label: 'Админ-панель', icon: 'ShieldCheck' }] : []),
+    ...(user?.is_admin ? [{ id: 'admin', label: 'Админ-панель', icon: 'ShieldCheck' }] : []),
   ];
 
   return (
@@ -150,12 +197,34 @@ const Index = () => {
             <Button size="icon" variant="ghost" className="md:hidden">
               <Icon name="Menu" size={24} />
             </Button>
-            <Button size="icon" variant="ghost" className="neon-border-magenta">
-              <Icon name="Upload" size={20} />
-            </Button>
-            <Button size="icon" variant="ghost">
-              <Icon name="User" size={20} />
-            </Button>
+            {user ? (
+              <>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="neon-border-magenta"
+                  onClick={() => setShowUploadDialog(true)}
+                >
+                  <Icon name="Upload" size={20} />
+                </Button>
+                <Button 
+                  size="icon" 
+                  variant="ghost"
+                  onClick={handleLogout}
+                >
+                  <Icon name="LogOut" size={20} />
+                </Button>
+              </>
+            ) : (
+              <Button 
+                size="sm"
+                className="neon-border"
+                onClick={() => setShowAuthDialog(true)}
+              >
+                <Icon name="User" size={16} className="mr-2" />
+                Войти
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -326,6 +395,149 @@ const Index = () => {
               </div>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent className="border-primary/30 neon-border">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">
+              {authMode === 'login' ? 'Вход' : 'Регистрация'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAuth} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Имя пользователя</Label>
+              <Input
+                id="username"
+                value={authForm.username}
+                onChange={(e) => setAuthForm({ ...authForm, username: e.target.value })}
+                required
+                className="bg-card border-primary/30"
+              />
+            </div>
+            {authMode === 'register' && (
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={authForm.email}
+                  onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+                  required
+                  className="bg-card border-primary/30"
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="password">Пароль</Label>
+              <Input
+                id="password"
+                type="password"
+                value={authForm.password}
+                onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                required
+                className="bg-card border-primary/30"
+              />
+            </div>
+            <Button type="submit" className="w-full neon-border">
+              {authMode === 'login' ? 'Войти' : 'Зарегистрироваться'}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+            >
+              {authMode === 'login' ? 'Нет аккаунта? Зарегистрируйтесь' : 'Уже есть аккаунт? Войдите'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent className="border-primary/30 neon-border max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">Загрузить видео</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpload} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Название</Label>
+              <Input
+                id="title"
+                value={uploadForm.title}
+                onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
+                required
+                className="bg-card border-primary/30"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Описание</Label>
+              <Textarea
+                id="description"
+                value={uploadForm.description}
+                onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
+                className="bg-card border-primary/30 min-h-[100px]"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="video_url">URL видео</Label>
+                <Input
+                  id="video_url"
+                  value={uploadForm.video_url}
+                  onChange={(e) => setUploadForm({ ...uploadForm, video_url: e.target.value })}
+                  required
+                  placeholder="https://example.com/video.mp4"
+                  className="bg-card border-primary/30"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="thumbnail_url">URL превью</Label>
+                <Input
+                  id="thumbnail_url"
+                  value={uploadForm.thumbnail_url}
+                  onChange={(e) => setUploadForm({ ...uploadForm, thumbnail_url: e.target.value })}
+                  required
+                  placeholder="https://example.com/thumb.jpg"
+                  className="bg-card border-primary/30"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="duration">Длительность (секунды)</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  value={uploadForm.duration}
+                  onChange={(e) => setUploadForm({ ...uploadForm, duration: parseInt(e.target.value) })}
+                  required
+                  className="bg-card border-primary/30"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="video_type">Тип видео</Label>
+                <Select 
+                  value={uploadForm.video_type} 
+                  onValueChange={(value) => setUploadForm({ ...uploadForm, video_type: value })}
+                >
+                  <SelectTrigger className="bg-card border-primary/30">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="regular">Обычное</SelectItem>
+                    <SelectItem value="series">Сериал</SelectItem>
+                    <SelectItem value="movie">Фильм</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button type="submit" className="w-full neon-border">
+              <Icon name="Upload" size={16} className="mr-2" />
+              Загрузить видео
+            </Button>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
