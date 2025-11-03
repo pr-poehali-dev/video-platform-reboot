@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "name": "Upload video with all fields",
+      "method": "POST",
+      "path": "/",
+      "headers": {
+        "X-User-Id": "1"
+      },
+      "body": {
+        "title": "Test Video",
+        "description": "Test description",
+        "video_file": "base64data",
+        "thumbnail_file": "base64data",
+        "duration": 120,
+        "video_type": "regular"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "message": "string",
+        "video": {
+          "id": "number",
+          "title": "string"
+        }
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

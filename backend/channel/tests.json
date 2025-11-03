@@ -1,0 +1,24 @@
+{
+  "tests": [
+    {
+      "name": "Get user channel",
+      "method": "GET",
+      "path": "/",
+      "headers": {
+        "X-User-Id": "1"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "channel": {
+          "id": "number",
+          "user_id": "number",
+          "channel_name": "string",
+          "is_verified": "boolean",
+          "subscribers_count": "number",
+          "videos_count": "number"
+        }
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "tests": [
+    {
+      "name": "Like a video",
+      "method": "POST",
+      "path": "/",
+      "headers": {
+        "X-User-Id": "1"
+      },
+      "body": {
+        "action": "like",
+        "video_id": 1
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "likes_count": "number",
+        "dislikes_count": "number"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

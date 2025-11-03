@@ -1,4 +1,7 @@
 {
+  "channel": "https://functions.poehali.dev/7fe1f93a-f70c-4770-86c0-b926b9e2151c",
+  "upload": "https://functions.poehali.dev/464e8d08-84e3-4dda-9946-ab2245beb5b2",
+  "video-actions": "https://functions.poehali.dev/edc1a64e-22f5-4af8-9d25-9eb74708783e",
   "videos": "https://functions.poehali.dev/66bc61b3-8db7-4807-9d85-faed71a55c6b",
   "auth": "https://functions.poehali.dev/3477a78a-977d-4cda-90bc-5519dceaf38c"
 }
